@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoTroc - Plateforme de troc écoresponsable</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo">
+        <a href="/">🌱 EcoTroc</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="/#annonces">Annonces</a></li>
+        <li id="nav-auth">
+          <a href="#" onclick="openLoginModal(event)">Connexion</a>
+        </li>
+        <li id="nav-user" style="display:none;">
+          <a href="/dashboard.html">Mon compte</a>
+          <a href="#" onclick="logout(event)">Déconnexion</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container">
+      <h1>Bienvenue sur EcoTroc</h1>
+      <p>Échangez vos objets de manière responsable et solidaire</p>
+      <button onclick="handleGetStarted()" class="btn btn-primary">Commencer</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="annonces" class="announcements-section">
+      <h2>Annonces récentes</h2>
+      
+      <div class="filters">
+        <select id="category-filter" onchange="filterAnnouncements()">
+          <option value="">Toutes les catégories</option>
+          <option value="livres">Livres</option>
+          <option value="electronics">Électronique</option>
+          <option value="furniture">Mobilier</option>
+          <option value="clothes">Vêtements</option>
+          <option value="sports">Sports</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+
+      <div id="announcements-list" class="announcements-grid">
+        <!-- Les annonces seront chargées par JavaScript -->
+      </div>
+
+      <div id="pagination" class="pagination"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 EcoTroc - Plateforme de troc responsable | <a href="/mentions-legales.html">Mentions légales</a></p>
+    </div>
+  </footer>
+
+  <!-- Modal de connexion/inscription -->
+  <div id="auth-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeAuthModal()">&times;</span>
+      
+      <div class="auth-tabs">
+        <button class="tab-button active" onclick="switchAuthTab('login')">Connexion</button>
+        <button class="tab-button" onclick="switchAuthTab('register')">Inscription</button>
+      </div>
+
+      <!-- Formulaire de connexion -->
+      <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+        <h3>Connexion</h3>
+        <input type="email" placeholder="Email" required>
+        <input type="password" placeholder="Mot de passe" required>
+        <button type="submit" class="btn btn-primary">Connexion</button>
+      </form>
+
+      <!-- Formulaire d'inscription -->
+      <form id="register-form" class="auth-form" style="display:none;" onsubmit="handleRegister(event)">
+        <h3>Inscription</h3>
+        <input type="text" placeholder="Nom d'utilisateur" required>
+        <input type="email" placeholder="Email" required>
+        <input type="password" placeholder="Mot de passe (min. 6 caractères)" required>
+        <button type="submit" class="btn btn-primary">S'inscrire</button>
+      </form>
+
+      <div id="auth-message" class="message"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon compte - EcoTroc</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo">
+        <a href="/">🌱 EcoTroc</a>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="/">Accueil</a></li>
+        <li><a href="/dashboard.html">Mon compte</a></li>
+        <li><a href="#" onclick="logout(event)">Déconnexion</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container" style="padding: 2rem 0;">
+    <h1>Mon compte</h1>
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+      <!-- Sidebar -->
+      <aside>
+        <div style="border: 1px solid #ddd; padding: 1.5rem; border-radius: 0.25rem;">
+          <h3 id="username">Mon profil</h3>
+          <p id="user-email"></p>
+          <p><strong>Points:</strong> <span id="user-points">0</span></p>
+          <button class="btn btn-secondary" onclick="showSection('profile')" style="width: 100%; margin-bottom: 0.5rem;">Modifier le profil</button>
+          <button class="btn btn-secondary" onclick="showSection('announcements')" style="width: 100%; margin-bottom: 0.5rem;">Mes annonces</button>
+          <button class="btn btn-secondary" onclick="showSection('new-announcement')" style="width: 100%; margin-bottom: 0.5rem;">Nouvelle annonce</button>
+        </div>
+      </aside>
+
+      <!-- Contenu principal -->
+      <section>
+        <!-- Section Profil -->
+        <div id="profile-section" style="display:none;">
+          <h2>Modifier le profil</h2>
+          <form onsubmit="handleProfileUpdate(event)" style="max-width: 500px;">
+            <input type="text" id="profile-username" placeholder="Nom d'utilisateur" required>
+            <input type="email" id="profile-email" placeholder="Email" required>
+            <button type="submit" class="btn btn-primary">Mettre à jour</button>
+            <button type="button" class="btn btn-secondary" onclick="loadUserProfile()">Annuler</button>
+          </form>
+          <div id="profile-message" class="message"></div>
+        </div>
+
+        <!-- Section Annonces -->
+        <div id="announcements-section" style="display:none;">
+          <h2>Mes annonces</h2>
+          <div id="user-announcements" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+            <!-- Les annonces seront chargées ici -->
+          </div>
+        </div>
+
+        <!-- Section Nouvelle annonce -->
+        <div id="new-announcement-section" style="display:none;">
+          <h2>Créer une nouvelle annonce</h2>
+          <form onsubmit="handleCreateAnnouncement(event)" style="max-width: 600px;">
+            <div>
+              <label for="ann-title">Titre *</label>
+              <input type="text" id="ann-title" placeholder="Ex: Livre de développement web" required>
+            </div>
+
+            <div>
+              <label for="ann-description">Description *</label>
+              <textarea id="ann-description" placeholder="Décrivez l'article..." rows="4" required></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <label for="ann-category">Catégorie *</label>
+                <select id="ann-category" required>
+                  <option value="">Choisir...</option>
+                  <option value="livres">Livres</option>
+                  <option value="electronics">Électronique</option>
+                  <option value="furniture">Mobilier</option>
+                  <option value="clothes">Vêtements</option>
+                  <option value="sports">Sports</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="ann-condition">État *</label>
+                <select id="ann-condition" required>
+                  <option value="bon_etat">Bon état</option>
+                  <option value="tres_bon">Très bon</option>
+                  <option value="acceptable">Acceptable</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label for="ann-exchange">Type d'échange *</label>
+              <select id="ann-exchange" onchange="updateExchangeFields()" required>
+                <option value="">Choisir...</option>
+                <option value="troc">Troc (échange d'objet)</option>
+                <option value="points">Points du site</option>
+              </select>
+            </div>
+
+            <div id="troc-fields" style="display:none;">
+              <label for="ann-desired">Qu'est-ce que vous recherchez? *</label>
+              <input type="text" id="ann-desired" placeholder="Ex: Livre de design, Sac de voyage">
+            </div>
+
+            <div id="points-fields" style="display:none;">
+              <label for="ann-points">Nombre de points *</label>
+              <input type="number" id="ann-points" placeholder="Ex: 50" min="1">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Créer l'annonce</button>
+          </form>
+          <div id="announcement-message" class="message"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 EcoTroc - Plateforme de troc responsable</p>
+    </div>
+  </footer>
+
+  <style>
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 0.25rem;
+      font-size: 1rem;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+  </style>
+
+  <script>
+    const API_URL = '/api';
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+      
+      // Vérifier si un paramètre 'section' est dans l'URL
+      const params = new URLSearchParams(window.location.search);
+      const section = params.get('section') || 'announcements';
+      
+      // Afficher la section demandée après le chargement
+      setTimeout(() => showSection(section), 100);
+    });
+
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_URL}/users/me`);
+        if (response.ok) {
+          currentUser = await response.json();
+          loadUserProfile();
+        } else {
+          window.location.href = '/';
+        }
+      } catch (error) {
+        window.location.href = '/';
+      }
+    }
+
+    function loadUserProfile() {
+      document.getElementById('username').textContent = currentUser.username || 'Mon profil';
+      document.getElementById('user-email').textContent = currentUser.email;
+      document.getElementById('user-points').textContent = currentUser.points || 0;
+      document.getElementById('profile-username').value = currentUser.username || '';
+      document.getElementById('profile-email').value = currentUser.email || '';
+      loadUserAnnouncements();
+    }
+
+    async function loadUserAnnouncements() {
+      try {
+        const response = await fetch(`${API_URL}/announcements/user/my-announcements`);
+        const data = await response.json();
+        
+        const container = document.getElementById('user-announcements');
+        if (data.announcements.length === 0) {
+          container.innerHTML = '<p>Vous n\'avez pas encore créé d\'annonce.</p>';
+          return;
+        }
+
+        container.innerHTML = data.announcements.map(ann => `
+          <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 0.25rem;">
+            <h3>${escapeHtml(ann.title)}</h3>
+            <p>${escapeHtml(ann.description.substring(0, 100))}...</p>
+            <p><strong>Catégorie:</strong> ${escapeHtml(ann.category)}</p>
+            <p><strong>État:</strong> ${ann.condition}</p>
+            <button class="btn btn-secondary" onclick="editAnnouncement(${ann.id})">Modifier</button>
+            <button class="btn btn-secondary" onclick="deleteAnnouncement(${ann.id})">Supprimer</button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    function showSection(section) {
+      document.getElementById('profile-section').style.display = section === 'profile' ? 'block' : 'none';
+      document.getElementById('announcements-section').style.display = section === 'announcements' ? 'block' : 'none';
+      document.getElementById('new-announcement-section').style.display = section === 'new-announcement' ? 'block' : 'none';
+    }
+
+    function updateExchangeFields() {
+      const exchange = document.getElementById('ann-exchange').value;
+      document.getElementById('troc-fields').style.display = exchange === 'troc' ? 'block' : 'none';
+      document.getElementById('points-fields').style.display = exchange === 'points' ? 'block' : 'none';
+    }
+
+    async function handleProfileUpdate(event) {
+      event.preventDefault();
+      const username = document.getElementById('profile-username').value;
+      const email = document.getElementById('profile-email').value;
+
+      try {
+        const response = await fetch(`${API_URL}/users/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email })
+        });
+
+        const messageDiv = document.getElementById('profile-message');
+        if (response.ok) {
+          messageDiv.textContent = 'Profil mis à jour avec succès';
+          messageDiv.className = 'message success';
+          currentUser.username = username;
+          currentUser.email = email;
+          loadUserProfile();
+        } else {
+          messageDiv.textContent = 'Erreur lors de la mise à jour';
+          messageDiv.className = 'message error';
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    async function handleCreateAnnouncement(event) {
+      event.preventDefault();
+      const title = document.getElementById('ann-title').value;
+      const description = document.getElementById('ann-description').value;
+      const category = document.getElementById('ann-category').value;
+      const condition = document.getElementById('ann-condition').value;
+      const exchange_type = document.getElementById('ann-exchange').value;
+      const desired_exchange = document.getElementById('ann-desired').value;
+      const points_value = parseInt(document.getElementById('ann-points').value) || null;
+
+      try {
+        const response = await fetch(`${API_URL}/announcements`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title, description, category, condition, exchange_type, desired_exchange, points_value
+          })
+        });
+
+        const messageDiv = document.getElementById('announcement-message');
+        if (response.ok) {
+          messageDiv.textContent = 'Annonce créée avec succès!';
+          messageDiv.className = 'message success';
+          document.querySelector('form').reset();
+          setTimeout(() => {
+            showSection('announcements');
+            loadUserAnnouncements();
+          }, 1000);
+        } else {
+          messageDiv.textContent = 'Erreur lors de la création';
+          messageDiv.className = 'message error';
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer cette annonce?')) return;
+
+      try {
+        const response = await fetch(`${API_URL}/announcements/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+          loadUserAnnouncements();
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    async function logout(event) {
+      event.preventDefault();
+      try {
+        await fetch(`${API_URL}/users/logout`, { method: 'POST' });
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+  </script>
+</body>
+</html>
