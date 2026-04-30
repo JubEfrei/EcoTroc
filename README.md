@@ -48,7 +48,6 @@ cp .env.example .env
 npm start
 ```
 
-L'application sera accessible sur `http://localhost:3000`
 
 ## 📁 Structure du projet
 
