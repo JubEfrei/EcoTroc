@@ -2,23 +2,59 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/init').getDatabase;
 const { requireAuth } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configuration de multer pour l'upload d'images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seules les images sont autorisées'));
+    }
+  }
+});
 
 // POST - Créer une nouvelle annonce
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, upload.single('image'), (req, res) => {
   const { title, description, category, condition, exchange_type, desired_exchange, points_value } = req.body;
 
   if (!title || !description || !category || !exchange_type) {
     return res.status(400).json({ error: 'Champs obligatoires manquants' });
   }
 
+  const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+
   const database = db();
   database.run(
     `INSERT INTO announcements 
-    (user_id, title, description, category, condition, exchange_type, desired_exchange, points_value) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [req.session.userId, title, description, category, condition || 'bon_etat', exchange_type, desired_exchange || null, points_value || null],
+    (user_id, title, description, category, condition, exchange_type, desired_exchange, points_value, image_url) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [req.session.userId, title, description, category, condition || 'bon_etat', exchange_type, desired_exchange || null, points_value || null, image_url],
     function(err) {
       if (err) {
+        // Supprimer l'image si l'insertion échoue
+        if (req.file) {
+          fs.unlinkSync(req.file.path);
+        }
         database.close();
         return res.status(500).json({ error: 'Erreur lors de la création' });
       }
@@ -35,7 +71,7 @@ router.get('/', (req, res) => {
   const offset = (page - 1) * limit;
   const category = req.query.category;
 
-  let query = 'SELECT a.id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
+  let query = 'SELECT a.id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
   let params = [];
 
   if (category) {
@@ -100,7 +136,7 @@ router.get('/user/my-announcements', requireAuth, (req, res) => {
 
   const database = db();
   database.all(
-    'SELECT * FROM announcements WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    'SELECT id, title, description, category, condition, exchange_type, desired_exchange, points_value, image_url, created_at FROM announcements WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
     [req.session.userId, limit, offset],
     (err, announcements) => {
       if (err) {

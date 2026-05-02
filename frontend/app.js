@@ -29,13 +29,20 @@ async function checkAuth() {
 function updateNavBar() {
   const authNav = document.getElementById('nav-auth');
   const userNav = document.getElementById('nav-user');
+  const getStartedBtn = document.querySelector('header .btn-primary');
   
   if (currentUser) {
     authNav.style.display = 'none';
     userNav.style.display = 'block';
+    if (getStartedBtn) {
+      getStartedBtn.textContent = 'Mettre une nouvelle annonce';
+    }
   } else {
     authNav.style.display = 'block';
     userNav.style.display = 'none';
+    if (getStartedBtn) {
+      getStartedBtn.textContent = 'Commencer';
+    }
   }
 }
 
@@ -200,6 +207,7 @@ function displayAnnouncements(announcements) {
 
   list.innerHTML = announcements.map(ann => `
     <div class="announcement-card">
+      ${ann.image_url ? `<img src="${ann.image_url}" alt="${escapeHtml(ann.title)}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.25rem; margin-bottom: 1rem;">` : ''}
       <h3>${escapeHtml(ann.title)}</h3>
       <div class="announcement-meta">
         <strong>${escapeHtml(ann.username)}</strong>

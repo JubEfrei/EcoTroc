@@ -72,6 +72,12 @@
               <textarea id="ann-description" placeholder="Décrivez l'article..." rows="4" required></textarea>
             </div>
 
+            <div>
+              <label for="ann-image">Image (optionnel)</label>
+              <input type="file" id="ann-image" accept="image/*">
+              <small>Formats acceptés: JPG, PNG, GIF. Taille max: 5MB</small>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div>
                 <label for="ann-category">Catégorie *</label>
@@ -201,6 +207,7 @@
 
         container.innerHTML = data.announcements.map(ann => `
           <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 0.25rem;">
+            ${ann.image_url ? `<img src="${ann.image_url}" alt="${escapeHtml(ann.title)}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 0.25rem; margin-bottom: 1rem;">` : ''}
             <h3>${escapeHtml(ann.title)}</h3>
             <p>${escapeHtml(ann.description.substring(0, 100))}...</p>
             <p><strong>Catégorie:</strong> ${escapeHtml(ann.category)}</p>
@@ -263,14 +270,30 @@
       const exchange_type = document.getElementById('ann-exchange').value;
       const desired_exchange = document.getElementById('ann-desired').value;
       const points_value = parseInt(document.getElementById('ann-points').value) || null;
+      const imageFile = document.getElementById('ann-image').files[0];
+
+      // Validation de l'image
+      if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+        const messageDiv = document.getElementById('announcement-message');
+        messageDiv.textContent = 'L\'image ne doit pas dépasser 5MB';
+        messageDiv.className = 'message error';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('condition', condition);
+      formData.append('exchange_type', exchange_type);
+      if (desired_exchange) formData.append('desired_exchange', desired_exchange);
+      if (points_value) formData.append('points_value', points_value);
+      if (imageFile) formData.append('image', imageFile);
 
       try {
         const response = await fetch(`${API_URL}/announcements`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title, description, category, condition, exchange_type, desired_exchange, points_value
-          })
+          body: formData
         });
 
         const messageDiv = document.getElementById('announcement-message');
@@ -283,29 +306,25 @@
             loadUserAnnouncements();
           }, 1000);
         } else {
-          messageDiv.textContent = 'Erreur lors de la création';
+          const data = await response.json();
+          messageDiv.textContent = data.error || 'Erreur lors de la création';
           messageDiv.className = 'message error';
         }
       } catch (error) {
         console.error('Erreur:', error);
-      }
-    }
-
-    async function deleteAnnouncement(id) {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer cette annonce?')) return;
-
-      try {
-        const response = await fetch(`${API_URL}/announcements/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          loadUserAnnouncements();
-        }
-      } catch (error) {
-        console.error('Erreur:', error);
+        document.getElementById('announcement-message').textContent = 'Erreur réseau';
+        document.getElementById('announcement-message').className = 'message error';
       }
     }
 
     function escapeHtml(text) {
-      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
       return text.replace(/[&<>"']/g, m => map[m]);
     }
 

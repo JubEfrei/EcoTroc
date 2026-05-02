@@ -19,6 +19,7 @@ initDatabase().catch(err => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Configuration des sessions
 app.use(session({
