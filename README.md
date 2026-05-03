@@ -3,7 +3,7 @@
 Plateforme de troc écoresponsable permettant d’échanger des objets ou des points, conçue selon les principes du Green IT.
 
 👉 **URL du site :** https://eco-troc-cyan.vercel.app/
-👉 **Rapport :** /docs/rapport.pdf
+👉 **Rapport :** /docs/Rapport-EcoTroc.pdf
 
 ---
 
