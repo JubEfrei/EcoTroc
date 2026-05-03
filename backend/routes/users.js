@@ -19,7 +19,7 @@ router.post('/register', async (req, res) => {
   try {
     const passwordHash = bcrypt.hashSync(password, 10);
     const result = await db.run(
-      'INSERT INTO users (email, username, password_hash) VALUES (?, ?, ?)',
+      'INSERT INTO users (email, username, password_hash, points) VALUES (?, ?, ?, 10)',
       [email, username, passwordHash]
     );
 

@@ -2,15 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { initDatabase, client } = require('./database/init');
 const { errorHandler } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
-const uploadDir = process.env.UPLOAD_DIR || (process.env.VERCEL ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, '../uploads'));
-if (!fs.existsSync(uploadDir)) {
+// Only create the local uploads directory in development (Vercel filesystem is read-only)
+const uploadDir = path.join(__dirname, '../uploads');
+if (!process.env.VERCEL && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
@@ -83,11 +83,6 @@ class TursoSessionStore extends session.Store {
   }
 }
 
-// Initialiser la base de données au démarrage
-initDatabase().catch(err => {
-  console.error('Erreur fatale lors de l\'initialisation:', err);
-});
-
 // Supporter Vercel / proxy HTTPS
 app.set('trust proxy', 1);
 
@@ -96,6 +91,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/uploads', express.static(uploadDir));
+
+// Ensure the DB (and the sessions table) is ready before every request.
+// The promise is cached so initDatabase() only runs once per process instance.
+let dbReady = null;
+app.use(async (req, res, next) => {
+  if (!dbReady) dbReady = initDatabase();
+  try {
+    await dbReady;
+    next();
+  } catch (err) {
+    console.error('DB init failed:', err);
+    res.status(503).json({ error: 'Service temporairement indisponible' });
+  }
+});
 
 // Configuration des sessions
 app.use(session({
@@ -115,6 +124,7 @@ app.use(session({
 // Routes API
 app.use('/api/users', require('./routes/users'));
 app.use('/api/announcements', require('./routes/announcements'));
+app.use('/api/exchanges', require('./routes/exchanges'));
 
 // Endpoint de santé
 app.get('/api/health', (req, res) => {
