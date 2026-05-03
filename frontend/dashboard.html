@@ -20,7 +20,7 @@
     </div>
   </nav>
 
-  <main class="container" style="padding: 2rem 0;">
+  <main class="container" style="padding: 2rem 0; flex: 1;">
     <h1>Mon compte</h1>
 
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
@@ -76,6 +76,7 @@
               <label for="ann-image">Image (optionnel)</label>
               <input type="file" id="ann-image" accept="image/*">
               <small>Formats acceptés: JPG, PNG, GIF. Taille max: 5MB</small>
+              <div id="current-image-preview" style="display: none; margin-top: 1rem;"></div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -158,7 +159,20 @@
 
   <script>
     const API_URL = '/api';
+    const DEFAULT_FETCH_OPTIONS = { credentials: 'same-origin' };
     let currentUser = null;
+
+    // Fonction pour échapper les caractères HTML (sécurité)
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       checkAuth();
@@ -173,7 +187,7 @@
 
     async function checkAuth() {
       try {
-        const response = await fetch(`${API_URL}/users/me`);
+        const response = await fetch(`${API_URL}/users/me`, DEFAULT_FETCH_OPTIONS);
         if (response.ok) {
           currentUser = await response.json();
           loadUserProfile();
@@ -196,11 +210,17 @@
 
     async function loadUserAnnouncements() {
       try {
-        const response = await fetch(`${API_URL}/announcements/user/my-announcements`);
-        const data = await response.json();
-        
+        const response = await fetch(`${API_URL}/announcements/user/my-announcements`, DEFAULT_FETCH_OPTIONS);
         const container = document.getElementById('user-announcements');
-        if (data.announcements.length === 0) {
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          container.innerHTML = `<p>Impossible de charger vos annonces. ${data.error || ''}</p>`;
+          return;
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data.announcements) || data.announcements.length === 0) {
           container.innerHTML = '<p>Vous n\'avez pas encore créé d\'annonce.</p>';
           return;
         }
@@ -240,6 +260,7 @@
 
       try {
         const response = await fetch(`${API_URL}/users/${currentUser.id}`, {
+          ...DEFAULT_FETCH_OPTIONS,
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email })
@@ -292,6 +313,7 @@
 
       try {
         const response = await fetch(`${API_URL}/announcements`, {
+          ...DEFAULT_FETCH_OPTIONS,
           method: 'POST',
           body: formData
         });
@@ -300,7 +322,8 @@
         if (response.ok) {
           messageDiv.textContent = 'Annonce créée avec succès!';
           messageDiv.className = 'message success';
-          document.querySelector('form').reset();
+          document.querySelector('#new-announcement-section form').reset();
+          document.getElementById('current-image-preview').style.display = 'none';
           setTimeout(() => {
             showSection('announcements');
             loadUserAnnouncements();
@@ -317,21 +340,142 @@
       }
     }
 
-    function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
-      return text.replace(/[&<>"']/g, m => map[m]);
+    async function deleteAnnouncement(id) {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/announcements/${id}`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          alert('Annonce supprimée avec succès!');
+          loadUserAnnouncements();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Erreur lors de la suppression');
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur réseau');
+      }
+    }
+
+    async function editAnnouncement(id) {
+      // Récupérer les détails de l'annonce
+      try {
+        const response = await fetch(`${API_URL}/announcements/${id}`, DEFAULT_FETCH_OPTIONS);
+        if (!response.ok) {
+          alert('Erreur lors de la récupération de l\'annonce');
+          return;
+        }
+
+        const announcement = await response.json();
+
+        // Pré-remplir le formulaire
+        document.getElementById('ann-title').value = announcement.title;
+        document.getElementById('ann-description').value = announcement.description;
+        document.getElementById('ann-category').value = announcement.category;
+        document.getElementById('ann-condition').value = announcement.condition;
+        document.getElementById('ann-exchange').value = announcement.exchange_type;
+        document.getElementById('ann-desired').value = announcement.desired_exchange || '';
+        document.getElementById('ann-points').value = announcement.points_value || '';
+
+        // Mettre à jour les champs d'échange
+        updateExchangeFields();
+
+        // Afficher l'image actuelle si elle existe
+        const imagePreview = document.getElementById('current-image-preview');
+        if (announcement.image_url) {
+          imagePreview.innerHTML = `<p>Image actuelle:</p><img src="${announcement.image_url}" alt="Image actuelle" style="max-width: 200px; max-height: 200px; object-fit: cover; border-radius: 0.25rem;">`;
+          imagePreview.style.display = 'block';
+        } else {
+          imagePreview.style.display = 'none';
+        }
+
+        // Changer le bouton du formulaire
+        const submitBtn = document.querySelector('#new-announcement-section form button[type="submit"]');
+        submitBtn.textContent = 'Modifier l\'annonce';
+        document.querySelector('#new-announcement-section form').onsubmit = (e) => handleUpdateAnnouncement(e, id);
+
+        // Afficher la section de création/modification
+        showSection('new-announcement');
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur réseau');
+      }
+    }
+
+    async function handleUpdateAnnouncement(event, id) {
+      event.preventDefault();
+      const title = document.getElementById('ann-title').value;
+      const description = document.getElementById('ann-description').value;
+      const category = document.getElementById('ann-category').value;
+      const condition = document.getElementById('ann-condition').value;
+      const exchange_type = document.getElementById('ann-exchange').value;
+      const desired_exchange = document.getElementById('ann-desired').value;
+      const points_value = parseInt(document.getElementById('ann-points').value) || null;
+      const imageFile = document.getElementById('ann-image').files[0];
+
+      // Validation de l'image
+      if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+        const messageDiv = document.getElementById('announcement-message');
+        messageDiv.textContent = 'L\'image ne doit pas dépasser 5MB';
+        messageDiv.className = 'message error';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('condition', condition);
+      formData.append('exchange_type', exchange_type);
+      if (desired_exchange) formData.append('desired_exchange', desired_exchange);
+      if (points_value !== null) formData.append('points_value', points_value.toString());
+      if (imageFile) formData.append('image', imageFile);
+
+      try {
+        const response = await fetch(`${API_URL}/announcements/${id}`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'PUT',
+          body: formData
+        });
+
+        const messageDiv = document.getElementById('announcement-message');
+        if (response.ok) {
+          messageDiv.textContent = 'Annonce modifiée avec succès!';
+          messageDiv.className = 'message success';
+
+          // Remettre le formulaire à zéro et changer le bouton
+          document.querySelector('#new-announcement-section form').reset();
+          const submitBtn = document.querySelector('#new-announcement-section form button[type="submit"]');
+          submitBtn.textContent = 'Créer l\'annonce';
+          document.querySelector('#new-announcement-section form').onsubmit = handleCreateAnnouncement;
+
+          setTimeout(() => {
+            showSection('announcements');
+            loadUserAnnouncements();
+          }, 1000);
+        } else {
+          const data = await response.json();
+          messageDiv.textContent = data.error || 'Erreur lors de la modification';
+          messageDiv.className = 'message error';
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('announcement-message').textContent = 'Erreur réseau';
+        document.getElementById('announcement-message').className = 'message error';
+      }
     }
 
     async function logout(event) {
       event.preventDefault();
       try {
-        await fetch(`${API_URL}/users/logout`, { method: 'POST' });
+        await fetch(`${API_URL}/users/logout`, { ...DEFAULT_FETCH_OPTIONS, method: 'POST' });
         window.location.href = '/';
       } catch (error) {
         console.error('Erreur:', error);

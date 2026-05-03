@@ -46,3 +46,12 @@ CREATE INDEX IF NOT EXISTS idx_announcements_is_active ON announcements(is_activ
 CREATE INDEX IF NOT EXISTS idx_exchanges_announcement_id ON exchanges(announcement_id);
 CREATE INDEX IF NOT EXISTS idx_exchanges_requester_id ON exchanges(requester_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Table des sessions pour express-session
+CREATE TABLE IF NOT EXISTS sessions (
+  sid TEXT PRIMARY KEY,
+  sess TEXT NOT NULL,
+  expire INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire);

@@ -1,5 +1,6 @@
 // EcoTroc - Application JavaScript minimaliste
 const API_URL = '/api';
+const DEFAULT_FETCH_OPTIONS = { credentials: 'same-origin' };
 let currentPage = 1;
 let currentCategory = '';
 
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Vérifier si l'utilisateur est connecté
 async function checkAuth() {
   try {
-    const response = await fetch(`${API_URL}/users/me`);
+    const response = await fetch(`${API_URL}/users/me`, DEFAULT_FETCH_OPTIONS);
     if (response.ok) {
       currentUser = await response.json();
       updateNavBar();
@@ -96,6 +97,7 @@ async function handleLogin(event) {
 
   try {
     const response = await fetch(`${API_URL}/users/login`, {
+      ...DEFAULT_FETCH_OPTIONS,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -135,6 +137,7 @@ async function handleRegister(event) {
 
   try {
     const response = await fetch(`${API_URL}/users/register`, {
+      ...DEFAULT_FETCH_OPTIONS,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, username, password })
@@ -168,7 +171,7 @@ async function handleRegister(event) {
 async function logout(event) {
   event.preventDefault();
   try {
-    await fetch(`${API_URL}/users/logout`, { method: 'POST' });
+    await fetch(`${API_URL}/users/logout`, { ...DEFAULT_FETCH_OPTIONS, method: 'POST' });
     currentUser = null;
     updateNavBar();
     loadAnnouncements();
@@ -186,11 +189,18 @@ async function loadAnnouncements() {
       url.searchParams.append('category', currentCategory);
     }
 
-    const response = await fetch(url);
+    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    if (!response.ok) {
+      console.error('Erreur API annonces', response.status);
+      const data = await response.json().catch(() => ({}));
+      displayAnnouncements([]);
+      return;
+    }
+
     const data = await response.json();
 
-    displayAnnouncements(data.announcements);
-    displayPagination(data.pagination);
+    displayAnnouncements(data.announcements || []);
+    displayPagination(data.pagination || { page: 1, pages: 0 });
   } catch (error) {
     console.error('Erreur lors du chargement:', error);
   }
