@@ -9,7 +9,7 @@ EcoTroc est un site web de troc minimaliste, rapide et écologique permettant au
 Ce projet met en application les principes d'éco-conception web :
 - **HTML5/CSS3 natif** : Zéro framework CSS lourd
 - **JavaScript minimaliste** : Uniquement pour l'interactivité essentielle
-- **SQLite local** : Base de données légère
+- **LibSQL distante** : Base de données compatible SQLite, adaptée au déploiement serverless
 - **Poids optimisé** : Cible < 200 Ko par page
 - **API REST sobre** : Requêtes minimales et optimisées
 
@@ -20,14 +20,14 @@ Ce projet met en application les principes d'éco-conception web :
 | Frontend | HTML5, CSS3 natif | Aucun framework inutile, performances optimales |
 | JS Frontend | JavaScript vanilla | Minimal, ~5 Ko, zero dépendances |
 | Backend | Node.js + Express | Léger, performant, pas de framework lourd |
-| Base de données | SQLite | Déploiement simple, zero serveur nécessaire |
+| Base de données | LibSQL | Base distante compatible SQLite pour le déploiement serverless |
 | Authentification | bcryptjs + sessions | Sécurité sans dépendances externes |
 | Dépendances | 6 uniquement | Minimalisme assumé |
 
 ## 🚀 Installation locale
 
 ### Prérequis
-- Node.js >= 14
+- Node.js 24.x
 - npm
 
 ### Étapes
@@ -42,11 +42,39 @@ npm install
 
 # 3. Copier et configurer .env
 cp .env.example .env
-# Éditer .env si nécessaire (port, secrets)
+# Éditer .env si nécessaire (port, secrets, LibSQL)
+
+# Variables LibSQL requises
+# LIBSQL_DATABASE_URL=https://your-libsql-url
+# LIBSQL_API_KEY=your-libsql-api-key
 
 # 4. Démarrer le serveur
 npm start
 ```
+
+## 🚀 Déploiement sur Vercel
+
+### Prérequis
+- Compte Vercel (gratuit)
+- Vercel CLI installé globalement
+
+### Étapes de déploiement
+
+```bash
+# 1. Installer Vercel CLI (si pas déjà fait)
+npm install -g vercel
+
+# 2. Se connecter à Vercel
+vercel login
+
+# 3. Déployer en développement
+vercel
+
+# 4. Déployer en production
+vercel --prod
+```
+
+Suivez les invites pour configurer le projet lors du premier déploiement.
 
 
 ## 📁 Structure du projet
@@ -68,7 +96,7 @@ EcoTroc/
 │   │   └── auth.js             # Authentification
 │   └── database/
 │       ├── init.js             # Initialisation BD
-│       └── schema.sql          # Schéma SQLite
+│       └── schema.sql          # Schéma SQL compatible LibSQL
 ├── package.json
 ├── .env.example
 ├── .gitignore
@@ -160,6 +188,9 @@ GET    /api/announcements/user/my-annonces → Mes annonces
 ## 🚀 Déploiement
 
 ### Sur Vercel (recommandé)
+
+Avant de déployer, ajoutez ces variables dans le dashboard Vercel : `LIBSQL_DATABASE_URL`, `LIBSQL_API_KEY` et `SESSION_SECRET`.
+
 ```bash
 # Installer Vercel CLI
 npm i -g vercel
@@ -175,7 +206,7 @@ vercel --prod
 4. Configuration :
    - Build: `npm install`
    - Start: `npm start`
-   - Ajouter env var: `DATABASE_PATH`
+   - Ajouter env vars: `LIBSQL_DATABASE_URL`, `LIBSQL_API_KEY`, `SESSION_SECRET`
 
 ## 📝 Conventions
 
