@@ -1,252 +1,149 @@
 # EcoTroc 🌱
 
-**Plateforme de troc écoresponsable - Numérique Durable (TI616)**
+Plateforme de troc écoresponsable permettant d’échanger des objets ou des points, conçue selon les principes du Green IT.
 
-EcoTroc est un site web de troc minimaliste, rapide et écologique permettant aux utilisateurs d'échanger des objets ou des points de manière responsable.
+👉 **URL du site :** https://eco-troc-cyan.vercel.app/
+👉 **Rapport :** /docs/rapport.pdf
 
-## 🌍 Objectif Green IT
+---
 
-Ce projet met en application les principes d'éco-conception web :
-- **HTML5/CSS3 natif** : Zéro framework CSS lourd
-- **JavaScript minimaliste** : Uniquement pour l'interactivité essentielle
-- **LibSQL distante** : Base de données compatible SQLite, adaptée au déploiement serverless
-- **Poids optimisé** : Cible < 200 Ko par page
-- **API REST sobre** : Requêtes minimales et optimisées
+## 👥 Équipe
 
-## 📋 Stack technique
+| Nom         | Rôle     | GitHub    |
+| ----------- | -------- | --------- |
+| À compléter | Lead Dev | @JubEfrei |
+| À compléter | Frontend | @Babouzi |
+| À compléter | Backend  | @imrnbnsm |
+| À compléter | DevOps   | @Doriped |
 
-| Composant | Technologie | Justification Green IT |
-|-----------|-------------|----------------------|
-| Frontend | HTML5, CSS3 natif | Aucun framework inutile, performances optimales |
-| JS Frontend | JavaScript vanilla | Minimal, ~5 Ko, zero dépendances |
-| Backend | Node.js + Express | Léger, performant, pas de framework lourd |
-| Base de données | LibSQL | Base distante compatible SQLite pour le déploiement serverless |
-| Authentification | bcryptjs + sessions | Sécurité sans dépendances externes |
-| Dépendances | 6 uniquement | Minimalisme assumé |
+---
 
-## 🚀 Installation locale
+## ⚙️ Stack technique
 
-### Prérequis
-- Node.js 24.x
-- npm
+* HTML5 / CSS3 natif → léger
+* JavaScript vanilla → sans dépendances
+* Node.js + Express → backend minimal
+* Turso (LibSQL) → base serverless
+* bcrypt + sessions → auth sécurisée
 
-### Étapes
+---
+
+## 🚀 Installation
 
 ```bash
-# 1. Cloner le projet
-git clone <url-repo>
+git clone <repo>
 cd EcoTroc
-
-# 2. Installer les dépendances
 npm install
-
-# 3. Copier et configurer .env
 cp .env.example .env
-# Éditer .env si nécessaire (port, secrets, LibSQL)
-
-# Variables LibSQL requises
-# LIBSQL_DATABASE_URL=https://your-libsql-url
-# LIBSQL_API_KEY=your-libsql-api-key
-
-# 4. Démarrer le serveur
 npm start
 ```
 
-## 🚀 Déploiement sur Vercel
+Variables d'envirnoment :
 
-### Prérequis
-- Compte Vercel (gratuit)
-- Vercel CLI installé globalement
+```
+TURSO_DATABASE_URL
+TURSO_API_KEY
+SESSION_SECRET
+```
 
-### Étapes de déploiement
+---
+
+## 🚀 Déploiement
 
 ```bash
-# 1. Installer Vercel CLI (si pas déjà fait)
-npm install -g vercel
-
-# 2. Se connecter à Vercel
-vercel login
-
-# 3. Déployer en développement
-vercel
-
-# 4. Déployer en production
 vercel --prod
 ```
 
-Suivez les invites pour configurer le projet lors du premier déploiement.
+---
 
-
-## 📁 Structure du projet
+## 📁 Structure
 
 ```
-EcoTroc/
-├── frontend/
-│   ├── index.html              # Page d'accueil
-│   ├── dashboard.html          # Espace utilisateur
-│   ├── mentions-legales.html   # Mentions légales
-│   ├── styles.css              # Styles unifiés (~2 Ko)
-│   └── app.js                  # JavaScript (~5 Ko)
-├── backend/
-│   ├── app.js                  # Serveur Express
-│   ├── routes/
-│   │   ├── users.js            # CRUD utilisateurs
-│   │   └── announcements.js    # CRUD annonces
-│   ├── middleware/
-│   │   └── auth.js             # Authentification
-│   └── database/
-│       ├── init.js             # Initialisation BD
-│       └── schema.sql          # Schéma SQL compatible LibSQL
-├── package.json
-├── .env.example
-├── .gitignore
-└── README.md
+frontend/   → UI
+backend/    → API
+database/   → SQL
+docs/       → rapport
 ```
+
+---
 
 ## 🔐 Fonctionnalités
 
 ### Utilisateurs
-- ✅ Inscription avec validation email et mot de passe
-- ✅ Connexion/déconnexion sécurisée
-- ✅ Profil utilisateur modifiable
-- ✅ Système de points pour les échanges
-- ✅ Suppression de compte avec confirmation
+
+* Inscription / connexion
+* Profil
+* Modification
+* Suppression
 
 ### Annonces
-- ✅ Créer/Modifier/Supprimer une annonce
-- ✅ Catégorisation (Livres, Électronique, Mobilier, Vêtements, Sports, Autre)
-- ✅ États du produit (Bon état, Très bon, Acceptable)
-- ✅ Deux types d'échange : Troc ou Points
-- ✅ Paginée (20 résultats par page)
-- ✅ Filtrage par catégorie
 
-### Sécurité
-- ✅ Hashage des mots de passe (bcryptjs)
-- ✅ Protection contre injections SQL (requêtes paramétrées)
-- ✅ Sessions sécurisées avec HttpOnly cookies
-- ✅ Validation côté serveur
-- ✅ Aucune donnée sensible dans le repo Git
-
-## 🌿 Indicateurs Green IT
-
-| Métrique | Objectif | État |
-|----------|----------|------|
-| Poids page accueil | < 200 Ko | À mesurer |
-| Requêtes HTTP | < 15 par page | À mesurer |
-| Score EcoIndex | A ou B | À mesurer |
-| Score Lighthouse Perf | > 80 | À mesurer |
-| FCP | < 1.8s | À mesurer |
-| LCP | < 2.5s | À mesurer |
-
-## 📡 API REST
-
-### Utilisateurs
-```
-POST   /api/users/register     → Inscription
-POST   /api/users/login        → Connexion
-POST   /api/users/logout       → Déconnexion
-GET    /api/users/me           → Profil actuel
-GET    /api/users/:id          → Profil public
-PUT    /api/users/:id          → Modifier profil
-DELETE /api/users/:id          → Supprimer compte
-```
-
-### Annonces
-```
-GET    /api/announcements              → Lister (pagination, filtres)
-GET    /api/announcements/:id          → Détail
-POST   /api/announcements              → Créer
-PUT    /api/announcements/:id          → Modifier
-DELETE /api/announcements/:id          → Supprimer
-GET    /api/announcements/user/my-annonces → Mes annonces
-```
-
-## 🧪 Tests
-
-### Scénarios fonctionnels
-
-```
-✓ Créer un utilisateur valide
-✓ Créer un utilisateur (email vide) → Erreur
-✓ Modifier un utilisateur existant
-✓ Supprimer un utilisateur
-✓ Lister les utilisateurs (paginé)
-✓ Créer une annonce
-✓ Connexion identifiants valides
-✓ Connexion mauvais MDP → Erreur
-✓ Accès page protégée sans connexion → Redirect
-```
-
-### Performance
-
-À tester avec :
-- **Google Lighthouse** (DevTools Chrome)
-- **EcoIndex** (https://www.ecoindex.fr)
-- **Website Carbon Calculator** (https://www.websitecarbon.com)
-- **PageSpeed Insights** (https://pagespeed.web.dev)
-
-## 🚀 Déploiement
-
-### Sur Vercel (recommandé)
-
-Avant de déployer, ajoutez ces variables dans le dashboard Vercel : `LIBSQL_DATABASE_URL`, `LIBSQL_API_KEY` et `SESSION_SECRET`.
-
-```bash
-# Installer Vercel CLI
-npm i -g vercel
-
-# Déployer
-vercel --prod
-```
-
-### Sur Render
-1. Créer un compte sur https://render.com
-2. Créer un nouveau "Web Service"
-3. Connecter le repo GitHub
-4. Configuration :
-   - Build: `npm install`
-   - Start: `npm start`
-   - Ajouter env vars: `LIBSQL_DATABASE_URL`, `LIBSQL_API_KEY`, `SESSION_SECRET`
-
-## 📝 Conventions
-
-### Git
-- `main` : branche de production
-- `develop` : branche de développement
-- `feat/xxx` : nouvelles fonctionnalités
-- `fix/xxx` : corrections
-- Messages courts et explicites
-
-### Code
-- Noms descriptifs en français/anglais
-- Fonctions courtes et réutilisables
-- Commentaires sur la logique complexe
-- Pas de `console.log` en production
-
-## 👥 Équipe
-
-| Rôle | Nom | GitHub |
-|------|-----|--------|
-| Lead Dev | [À compléter] | [@username] |
-| Frontend | [À compléter] | [@username] |
-| Backend | [À compléter] | [@username] |
-| DevOps | [À compléter] | [@username] |
-
-## 📚 Ressources
-
-- [GR491 Green IT](https://gr491.isit-europe.org)
-- [Éco-conception web](https://www.eco-conception-web.com)
-- [Collectif Green IT](https://www.greenit.fr)
-
-## 📞 Support
-
-Pour toute question ou problème : créer une GitHub Issue
-
-## 📄 Licence
-
-MIT - Projet académique EFREI Paris 2026
+* CRUD complet
+* Pagination (20 max)
+* Filtrage
 
 ---
 
-**Dernière mise à jour:** 30 avril 2026  
-**Version:** 1.0.0 (Bêta)
+## 🔒 Sécurité
+
+* bcrypt
+* requêtes SQL paramétrées
+* sessions sécurisées
+
+---
+
+## 🌿 Green IT
+
+* < 500 Ko/page
+* < 15 requêtes HTTP
+* Lighthouse > 80
+
+---
+
+## 📡 API
+
+### Users
+
+```
+POST /api/users/register
+POST /api/users/login
+GET  /api/users/me
+PUT  /api/users/:id
+DELETE /api/users/:id
+```
+
+### Announcements
+
+```
+GET  /api/announcements
+POST /api/announcements
+PUT  /api/announcements/:id
+DELETE /api/announcements/:id
+```
+
+---
+
+## 🧪 Tests
+
+* CRUD utilisateurs
+* CRUD annonces
+* Auth
+* Lighthouse / EcoIndex
+
+---
+
+## 🧾 Git
+
+* main / develop
+* feat/* fix/*
+* commits clairs
+
+---
+
+## 📄 Docs
+
+/docs → rapport + UML + captures
+
+---
+
+Projet académique EFREI 2026
