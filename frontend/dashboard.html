@@ -33,6 +33,7 @@
           <button class="btn btn-secondary" onclick="showSection('profile')" style="width: 100%; margin-bottom: 0.5rem;">Modifier le profil</button>
           <button class="btn btn-secondary" onclick="showSection('announcements')" style="width: 100%; margin-bottom: 0.5rem;">Mes annonces</button>
           <button class="btn btn-secondary" onclick="showSection('new-announcement')" style="width: 100%; margin-bottom: 0.5rem;">Nouvelle annonce</button>
+          <button class="btn btn-secondary" onclick="showSection('exchanges')" style="width: 100%; margin-bottom: 0.5rem;">Échanges reçus</button>
         </div>
       </aside>
 
@@ -125,6 +126,13 @@
             <button type="submit" class="btn btn-primary">Créer l'annonce</button>
           </form>
           <div id="announcement-message" class="message"></div>
+        </div>
+
+        <!-- Section Échanges reçus -->
+        <div id="exchanges-section" style="display:none;">
+          <h2>Échanges reçus</h2>
+          <p style="color:#555; margin-bottom:1rem;">Propositions de troc en attente sur vos annonces.</p>
+          <div id="incoming-exchanges"><p>Chargement...</p></div>
         </div>
       </section>
     </div>
@@ -245,6 +253,53 @@
       document.getElementById('profile-section').style.display = section === 'profile' ? 'block' : 'none';
       document.getElementById('announcements-section').style.display = section === 'announcements' ? 'block' : 'none';
       document.getElementById('new-announcement-section').style.display = section === 'new-announcement' ? 'block' : 'none';
+      document.getElementById('exchanges-section').style.display = section === 'exchanges' ? 'block' : 'none';
+      if (section === 'exchanges') loadIncomingExchanges();
+    }
+
+    async function loadIncomingExchanges() {
+      const container = document.getElementById('incoming-exchanges');
+      try {
+        const response = await fetch(`${API_URL}/exchanges/incoming`, DEFAULT_FETCH_OPTIONS);
+        const data = await response.json();
+
+        if (!data.exchanges || data.exchanges.length === 0) {
+          container.innerHTML = '<p>Aucune proposition en attente.</p>';
+          return;
+        }
+
+        container.innerHTML = data.exchanges.map(ex => `
+          <div style="border:1px solid #ddd; padding:1rem; border-radius:0.25rem; margin-bottom:1rem;">
+            <p><strong>Annonce :</strong> ${escapeHtml(ex.announcement_title)}</p>
+            <p><strong>De :</strong> ${escapeHtml(ex.requester_username)} (${escapeHtml(ex.requester_email)})</p>
+            <p><strong>Proposition :</strong> ${escapeHtml(ex.offer_item || '—')}</p>
+            <p style="color:#888; font-size:0.85rem;">${new Date(ex.created_at).toLocaleDateString('fr-FR')}</p>
+            <button class="btn btn-primary" onclick="respondExchange(${ex.id}, 'accept')" style="margin-right:0.5rem;">Accepter</button>
+            <button class="btn btn-secondary" onclick="respondExchange(${ex.id}, 'reject')">Refuser</button>
+          </div>
+        `).join('');
+      } catch (error) {
+        container.innerHTML = '<p>Erreur lors du chargement.</p>';
+      }
+    }
+
+    async function respondExchange(id, action) {
+      try {
+        const response = await fetch(`${API_URL}/exchanges/${id}`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          loadIncomingExchanges();
+        } else {
+          alert(data.error || 'Erreur');
+        }
+      } catch (error) {
+        alert('Erreur réseau');
+      }
     }
 
     function updateExchangeFields() {

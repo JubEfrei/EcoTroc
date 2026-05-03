@@ -3,26 +3,13 @@ const router = express.Router();
 const db = require('../database/init');
 const { requireAuth } = require('../middleware/auth');
 const multer = require('multer');
-const os = require('os');
 const path = require('path');
 const fs = require('fs');
-const { put } = require('@vercel/blob');
+const { put, del } = require('@vercel/blob');
 
-const uploadDir = process.env.UPLOAD_DIR || (process.env.VERCEL ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, '../../uploads'));
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Keep file in memory — no disk write needed before Blob upload
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -34,34 +21,24 @@ const upload = multer({
 });
 
 async function uploadAnnouncementImage(reqFile) {
-  if (!reqFile) {
-    return null;
-  }
+  if (!reqFile) return null;
 
-  const localPath = reqFile.path;
-  const fileContent = reqFile.buffer || fs.readFileSync(localPath);
-  const filename = reqFile.filename;
+  const ext = path.extname(reqFile.originalname).toLowerCase() || '.jpg';
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    try {
-      const blob = await put(`announcements/${filename}`, fileContent, {
-        access: 'public',
-        contentType: reqFile.mimetype
-      });
-      console.log('Image uploadée vers Vercel Blob:', blob.url);
-      if (fs.existsSync(localPath)) {
-        fs.unlinkSync(localPath);
-      }
-      return blob.url;
-    } catch (fileErr) {
-      console.warn('Échec du upload Vercel Blob, utilisation du stockage local:', fileErr.message);
-    }
+    const blob = await put(`announcements/${filename}`, reqFile.buffer, {
+      access: 'public',
+      contentType: reqFile.mimetype
+    });
+    return blob.url; // permanent CDN URL, e.g. https://xxx.public.blob.vercel-storage.com/...
   }
 
-  // Fallback local storage when no blob token is configured
-  const localUrl = `/uploads/${filename}`;
-  console.log('Image stockée localement:', localUrl);
-  return localUrl;
+  // Local development fallback: write to disk
+  const localDir = path.join(__dirname, '../../uploads');
+  if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+  fs.writeFileSync(path.join(localDir, filename), reqFile.buffer);
+  return `/uploads/${filename}`;
 }
 
 // POST - Créer une nouvelle annonce
@@ -120,10 +97,10 @@ router.get('/user/my-announcements', requireAuth, async (req, res) => {
 
   try {
     const announcements = await db.all(
-      'SELECT id, title, description, category, condition, exchange_type, desired_exchange, points_value, image_url, created_at FROM announcements WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      'SELECT id, title, description, category, condition, exchange_type, desired_exchange, points_value, image_url, created_at FROM announcements WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?',
       [req.session.userId, limit, offset]
     );
-    const count = await db.get('SELECT COUNT(*) as total FROM announcements WHERE user_id = ?', [req.session.userId]);
+    const count = await db.get('SELECT COUNT(*) as total FROM announcements WHERE user_id = ? AND is_active = 1', [req.session.userId]);
 
     res.json({
       announcements,
@@ -164,7 +141,7 @@ router.get('/', async (req, res) => {
   const offset = (page - 1) * limit;
   const category = req.query.category;
 
-  let query = 'SELECT a.id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
+  let query = 'SELECT a.id, a.user_id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
   const params = [];
 
   if (category) {
@@ -275,7 +252,7 @@ router.put('/:id', requireAuth, upload.single('image'), async (req, res) => {
 // DELETE - Supprimer une annonce
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const announcement = await db.get('SELECT user_id FROM announcements WHERE id = ?', [req.params.id]);
+    const announcement = await db.get('SELECT user_id, image_url FROM announcements WHERE id = ?', [req.params.id]);
     if (!announcement) {
       return res.status(404).json({ error: 'Annonce non trouvée' });
     }
@@ -284,6 +261,12 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await db.run('DELETE FROM announcements WHERE id = ?', [req.params.id]);
+
+    // Supprimer l'image Vercel Blob si elle existe
+    if (announcement.image_url && announcement.image_url.includes('vercel-storage.com')) {
+      try { await del(announcement.image_url); } catch (_) {}
+    }
+
     res.json({ message: 'Annonce supprimée' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la suppression' });

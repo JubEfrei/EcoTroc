@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS exchanges (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   announcement_id INTEGER NOT NULL,
   requester_id INTEGER NOT NULL,
+  offer_item TEXT,
   status TEXT DEFAULT 'pending',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   completed_at DATETIME,

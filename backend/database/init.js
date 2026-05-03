@@ -84,15 +84,31 @@ async function initDatabase() {
     .map(stmt => stmt.trim())
     .filter(Boolean);
 
-  console.log('Executing schema statements:', statements.length);
   for (const statement of statements) {
-    const preview = statement.substring(0, 50).replace(/\n/g, ' ');
-    console.log('Executing:', preview + (statement.length > 50 ? '...' : ''));
-    await client.execute({ sql: statement, args: [] });
+    try {
+      await client.execute({ sql: statement, args: [] });
+    } catch (err) {
+      // Ignore "already exists" errors — tables/indexes already created
+      if (!err.message.includes('already exists') && !err.message.includes('duplicate column')) {
+        throw err;
+      }
+    }
+  }
+
+  // Migrations for existing databases
+  const migrations = [
+    'ALTER TABLE exchanges ADD COLUMN offer_item TEXT'
+  ];
+  for (const migration of migrations) {
+    try {
+      await client.execute({ sql: migration, args: [] });
+    } catch (_) {
+      // Column already exists — safe to ignore
+    }
   }
 
   initialized = true;
-  console.log('✓ Base de données Turso initialisée avec succès');
+  console.log('✓ Base de données initialisée avec succès');
 }
 
 function normalizeValue(value) {

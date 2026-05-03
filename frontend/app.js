@@ -7,6 +7,12 @@ let currentCategory = '';
 // État de l'utilisateur
 let currentUser = null;
 
+// Annonce sélectionnée pour l'échange
+let selectedAnnouncement = null;
+
+// Cache des annonces chargées (id → objet)
+const announcementCache = {};
+
 // Vérifier l'authentification au chargement
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth();
@@ -109,8 +115,9 @@ async function handleLogin(event) {
     if (response.ok) {
       messageDiv.textContent = 'Connexion réussie!';
       messageDiv.className = 'message success';
-      setTimeout(() => {
-        currentUser = { id: data.userId, email };
+      setTimeout(async () => {
+        const meRes = await fetch(`${API_URL}/users/me`, DEFAULT_FETCH_OPTIONS);
+        currentUser = meRes.ok ? await meRes.json() : { id: data.userId, email };
         updateNavBar();
         closeAuthModal();
         loadAnnouncements();
@@ -209,27 +216,51 @@ async function loadAnnouncements() {
 // Afficher les annonces
 function displayAnnouncements(announcements) {
   const list = document.getElementById('announcements-list');
-  
+
   if (announcements.length === 0) {
     list.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Aucune annonce trouvée.</p>';
     return;
   }
 
-  list.innerHTML = announcements.map(ann => `
-    <div class="announcement-card">
-      ${ann.image_url ? `<img src="${ann.image_url}" alt="${escapeHtml(ann.title)}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.25rem; margin-bottom: 1rem;">` : ''}
-      <h3>${escapeHtml(ann.title)}</h3>
-      <div class="announcement-meta">
-        <strong>${escapeHtml(ann.username)}</strong>
-        <span class="announcement-category">${escapeHtml(ann.category)}</span>
-      </div>
-      <p class="announcement-description">${escapeHtml(ann.description.substring(0, 100))}...</p>
-      <div class="announcement-exchange">
-        ${ann.exchange_type === 'troc' ? 'Échange' : 'Points: ' + ann.points_value}
-      </div>
-      ${ann.desired_exchange ? `<p><small>Recherche: ${escapeHtml(ann.desired_exchange)}</small></p>` : ''}
-    </div>
-  `).join('');
+  try {
+    list.innerHTML = announcements.map(ann => {
+      announcementCache[ann.id] = ann;
+
+      const isOwn = currentUser && Number(currentUser.id) === Number(ann.user_id);
+      const exchangeLabel = ann.exchange_type === 'troc'
+        ? `Troc${ann.desired_exchange ? ' — recherche : ' + escapeHtml(String(ann.desired_exchange)) : ''}`
+        : `${ann.points_value} point(s)`;
+
+      const tradeBtn = !isOwn
+        ? `<button class="btn btn-primary" style="margin-top:0.75rem; width:100%;"
+             onclick="openTradeModal(${ann.id})">
+             ${ann.exchange_type === 'troc' ? 'Proposer un échange' : `Obtenir (${ann.points_value} pts)`}
+           </button>`
+        : '';
+
+      const desc = ann.description ? escapeHtml(String(ann.description).substring(0, 100)) : '';
+      const imageUrl = typeof ann.image_url === 'string' && ann.image_url ? ann.image_url : null;
+      const imgHtml = imageUrl
+        ? `<img src="${imageUrl}" alt="${escapeHtml(String(ann.title))}" style="width:100%; height:200px; object-fit:cover; border-radius:0.25rem; margin-bottom:1rem;" onerror="this.style.display='none'">`
+        : '';
+
+      return `
+      <div class="announcement-card">
+        ${imgHtml}
+        <h3>${escapeHtml(String(ann.title))}</h3>
+        <div class="announcement-meta">
+          <strong>${escapeHtml(String(ann.username || ''))}</strong>
+          <span class="announcement-category">${escapeHtml(String(ann.category))}</span>
+        </div>
+        <p class="announcement-description">${desc}${desc.length >= 100 ? '…' : ''}</p>
+        <div class="announcement-exchange">${exchangeLabel}</div>
+        ${tradeBtn}
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('Erreur affichage annonces:', err);
+    list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: red;">Erreur lors de l\'affichage des annonces.</p>';
+  }
 }
 
 // Afficher la pagination
@@ -270,6 +301,85 @@ function filterAnnouncements() {
   currentCategory = document.getElementById('category-filter').value;
   currentPage = 1;
   loadAnnouncements();
+}
+
+// Ouvrir la modal d'échange
+function openTradeModal(id) {
+  if (!currentUser) {
+    openLoginModal();
+    return;
+  }
+  const ann = announcementCache[id];
+  if (!ann) return;
+  selectedAnnouncement = ann;
+  document.getElementById('trade-message').textContent = '';
+  document.getElementById('trade-message').className = 'message';
+  document.getElementById('trade-offer-input').value = '';
+
+  document.getElementById('trade-modal-title').textContent = ann.title;
+
+  if (ann.exchange_type === 'points') {
+    document.getElementById('trade-modal-info').textContent =
+      `Coût : ${ann.points_value} point(s). Vos points : ${currentUser.points !== undefined ? currentUser.points : '…'}`;
+    document.getElementById('trade-offer-field').style.display = 'none';
+    document.getElementById('trade-confirm-btn').textContent = `Obtenir pour ${ann.points_value} pt(s)`;
+  } else {
+    document.getElementById('trade-modal-info').textContent = ann.desired_exchange
+      ? `Le propriétaire recherche : ${ann.desired_exchange}`
+      : 'Le propriétaire recherche un échange.';
+    document.getElementById('trade-offer-field').style.display = 'block';
+    document.getElementById('trade-confirm-btn').textContent = 'Envoyer ma proposition';
+  }
+
+  document.getElementById('trade-modal').style.display = 'flex';
+}
+
+function closeTradeModal() {
+  document.getElementById('trade-modal').style.display = 'none';
+  selectedAnnouncement = null;
+}
+
+async function confirmTrade() {
+  if (!selectedAnnouncement) return;
+
+  const msgDiv = document.getElementById('trade-message');
+  const body = { announcement_id: selectedAnnouncement.id };
+
+  if (selectedAnnouncement.exchange_type === 'troc') {
+    const offerItem = document.getElementById('trade-offer-input').value.trim();
+    if (!offerItem) {
+      msgDiv.textContent = 'Veuillez décrire ce que vous proposez.';
+      msgDiv.className = 'message error';
+      return;
+    }
+    body.offer_item = offerItem;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/exchanges`, {
+      ...DEFAULT_FETCH_OPTIONS,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      msgDiv.textContent = data.message;
+      msgDiv.className = 'message success';
+      if (selectedAnnouncement.exchange_type === 'points' && currentUser) {
+        currentUser.points = (Number(currentUser.points) || 0) - Number(selectedAnnouncement.points_value);
+      }
+      setTimeout(() => { closeTradeModal(); loadAnnouncements(); }, 1500);
+    } else {
+      msgDiv.textContent = data.error || "Erreur lors de l'échange";
+      msgDiv.className = 'message error';
+    }
+  } catch (err) {
+    msgDiv.textContent = 'Erreur réseau';
+    msgDiv.className = 'message error';
+  }
 }
 
 // Fonction pour échapper les caractères HTML (sécurité)
