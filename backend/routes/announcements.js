@@ -112,46 +112,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   }
 });
 
-// GET - Lister les annonces actives (pagination, max 20)
-router.get('/', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = 20;
-  const offset = (page - 1) * limit;
-  const category = req.query.category;
-
-  let query = 'SELECT a.id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
-  const params = [];
-
-  if (category) {
-    query += ' AND a.category = ?';
-    params.push(category);
-  }
-
-  query += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?';
-  params.push(limit, offset);
-
-  try {
-    const announcements = await db.all(query, params);
-    const countQuery = category
-      ? 'SELECT COUNT(*) as total FROM announcements WHERE is_active = 1 AND category = ?'
-      : 'SELECT COUNT(*) as total FROM announcements WHERE is_active = 1';
-    const countParams = category ? [category] : [];
-    const count = await db.get(countQuery, countParams);
-
-    res.json({
-      announcements,
-      pagination: {
-        page,
-        total: count.total,
-        pages: Math.ceil(count.total / limit)
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Erreur lors de la récupération' });
-  }
-});
-
-// GET - Lister les annonces de l'utilisateur connecté
+// GET - Lister les annonces de l'utilisateur connecté (must be before /:id route)
 router.get('/user/my-announcements', requireAuth, async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = 20;
@@ -191,6 +152,45 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Annonce non trouvée' });
     }
     res.json(announcement);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur lors de la récupération' });
+  }
+});
+
+// GET - Lister les annonces actives (pagination, max 20)
+router.get('/', async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  const category = req.query.category;
+
+  let query = 'SELECT a.id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
+  const params = [];
+
+  if (category) {
+    query += ' AND a.category = ?';
+    params.push(category);
+  }
+
+  query += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  try {
+    const announcements = await db.all(query, params);
+    const countQuery = category
+      ? 'SELECT COUNT(*) as total FROM announcements WHERE is_active = 1 AND category = ?'
+      : 'SELECT COUNT(*) as total FROM announcements WHERE is_active = 1';
+    const countParams = category ? [category] : [];
+    const count = await db.get(countQuery, countParams);
+
+    res.json({
+      announcements,
+      pagination: {
+        page,
+        total: count.total,
+        pages: Math.ceil(count.total / limit)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la récupération' });
   }
