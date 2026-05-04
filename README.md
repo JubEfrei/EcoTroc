@@ -9,12 +9,12 @@ Plateforme de troc écoresponsable permettant d’échanger des objets ou des po
 
 ## 👥 Équipe
 
-| Nom         | Rôle     | GitHub    |
-| ----------- | -------- | --------- |
-| À compléter | Lead Dev | @JubEfrei |
-| À compléter | Frontend | @Babouzi |
-| À compléter | Backend  | @imrnbnsm |
-| À compléter | DevOps   | @Doriped |
+| Nom             | Rôle     | GitHub    |
+| ----------------| -------- | --------- |
+| Julien Casamian | Lead Dev | @JubEfrei |
+| Eham Abouzi     | Frontend | @Babouzi |
+| Imrân Benessam  | Backend  | @imrnbnsm |
+| Dorian Anguille | DevOps   | @Doriped |
 
 ---
 
