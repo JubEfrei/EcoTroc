@@ -16,11 +16,11 @@
   --success-text: #2e7d32;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --modal-overlay: rgba(0, 0, 0, 0.5);
-  --dark-bg: #1a1a1a;
-  --dark-card: #2a2a2a;
-  --dark-border: #444;
-  --dark-text: #f0f0f0;
-  --dark-input: #333;
+  --dark-bg: #0f0f0f;
+  --dark-card: #1a1a1a;
+  --dark-border: #4a4a4a;
+  --dark-text: #e8e8e8;
+  --dark-input: #2a2a2a;
 }
 
 * {
