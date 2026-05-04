@@ -94,9 +94,9 @@ docs/       → rapport
 
 ## 🌿 Green IT
 
-* < 500 Ko/page
-* < 15 requêtes HTTP
-* Lighthouse > 80
+* < 10 Ko/page
+* < 5 requêtes HTTP
+* Lighthouse = 100
 
 ---
 
