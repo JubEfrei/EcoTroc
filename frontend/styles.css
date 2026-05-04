@@ -184,12 +184,12 @@ main {
 
 .announcement-card h3 {
   margin-bottom: 0.5rem;
-  font-size: 1.1rem;
+  font-size: 1.125rem;
   color: var(--primary-color);
 }
 
 .announcement-meta {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-light);
   margin-bottom: 0.5rem;
 }
@@ -204,7 +204,7 @@ main {
 }
 
 .announcement-description {
-  font-size: 0.95rem;
+  font-size: 1rem;
   margin-bottom: 1rem;
   line-height: 1.5;
 }
