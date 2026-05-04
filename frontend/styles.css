@@ -4,9 +4,23 @@
   --primary-color: #2d5a3d;
   --secondary-color: #f0f4f1;
   --accent-color: #7cb342;
+  --accent-dark: #6ba835;
   --text-color: #333;
+  --text-light: #666;
+  --text-muted: #555;
   --border-color: #ddd;
   --spacing-unit: 1rem;
+  --error-bg: #ffebee;
+  --error-text: #c62828;
+  --success-bg: #e8f5e9;
+  --success-text: #2e7d32;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+  --dark-bg: #1a1a1a;
+  --dark-card: #2a2a2a;
+  --dark-border: #444;
+  --dark-text: #f0f0f0;
+  --dark-input: #333;
 }
 
 * {
@@ -117,7 +131,7 @@ main {
 }
 
 .btn-primary:hover {
-  background: #6ba835;
+  background: var(--accent-dark);
 }
 
 .btn-secondary {
@@ -165,7 +179,7 @@ main {
 }
 
 .announcement-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .announcement-card h3 {
@@ -176,7 +190,7 @@ main {
 
 .announcement-meta {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-light);
   margin-bottom: 0.5rem;
 }
 
@@ -217,7 +231,7 @@ main {
 }
 
 .pagination button:hover {
-  background: #ddd;
+  background: var(--border-color);
 }
 
 .pagination button.active {
@@ -233,7 +247,7 @@ main {
   top: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--modal-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,11 +267,11 @@ main {
   float: right;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #666;
+  color: var(--text-light);
 }
 
 .close:hover {
-  color: #000;
+  color: var(--text-color);
 }
 
 /* Onglets auth */
@@ -318,14 +332,14 @@ main {
 }
 
 .message.error {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--error-bg);
+  color: var(--error-text);
   display: block;
 }
 
 .message.success {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--success-bg);
+  color: var(--success-text);
   display: block;
 }
 
@@ -375,23 +389,23 @@ footer a:hover {
 /* Mode sombre (si préféré) */
 @media (prefers-color-scheme: dark) {
   body {
-    background: #1a1a1a;
-    color: #f0f0f0;
+    background: var(--dark-bg);
+    color: var(--dark-text);
   }
 
   .modal-content,
   .announcement-card {
-    background: #2a2a2a;
-    border-color: #444;
+    background: var(--dark-card);
+    border-color: var(--dark-border);
   }
 
   .announcement-category {
-    background: #333;
+    background: var(--dark-input);
   }
 
   input {
-    background: #333;
-    color: #f0f0f0;
-    border-color: #444;
+    background: var(--dark-input);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
   }
 }
