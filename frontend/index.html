@@ -64,9 +64,9 @@
   </footer>
 
   <!-- Modal de connexion/inscription -->
-  <div id="auth-modal" class="modal" style="display:none;">
+  <div id="auth-modal" class="modal" style="display:none;" role="dialog" aria-labelledby="auth-modal-title">
     <div class="modal-content">
-      <span class="close" onclick="closeAuthModal()">&times;</span>
+      <span class="close" onclick="closeAuthModal()" aria-label="Fermer">&times;</span>
       
       <div class="auth-tabs">
         <button class="tab-button active" onclick="switchAuthTab('login')">Connexion</button>
@@ -75,19 +75,23 @@
 
       <!-- Formulaire de connexion -->
       <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
-        <h3>Connexion</h3>
-        <input type="email" placeholder="Email" required>
-        <input type="password" placeholder="Mot de passe" required>
-        <button type="submit" class="btn btn-primary">Connexion</button>
+        <fieldset>
+          <legend>Connexion</legend>
+          <input type="email" placeholder="Email" required aria-label="Email">
+          <input type="password" placeholder="Mot de passe" required aria-label="Mot de passe">
+          <button type="submit" class="btn btn-primary">Connexion</button>
+        </fieldset>
       </form>
 
       <!-- Formulaire d'inscription -->
       <form id="register-form" class="auth-form" style="display:none;" onsubmit="handleRegister(event)">
-        <h3>Inscription</h3>
-        <input type="text" placeholder="Nom d'utilisateur" required>
-        <input type="email" placeholder="Email" required>
-        <input type="password" placeholder="Mot de passe (min. 6 caractères)" required>
-        <button type="submit" class="btn btn-primary">S'inscrire</button>
+        <fieldset>
+          <legend>Inscription</legend>
+          <input type="text" placeholder="Nom d'utilisateur" required aria-label="Nom d'utilisateur">
+          <input type="email" placeholder="Email" required aria-label="Email">
+          <input type="password" placeholder="Mot de passe (min. 6 caractères)" required aria-label="Mot de passe">
+          <button type="submit" class="btn btn-primary">S'inscrire</button>
+        </fieldset>
       </form>
 
       <div id="auth-message" class="message"></div>
@@ -95,9 +99,9 @@
   </div>
 
   <!-- Modal d'échange -->
-  <div id="trade-modal" class="modal" style="display:none;">
+  <div id="trade-modal" class="modal" style="display:none;" role="dialog" aria-labelledby="trade-modal-title">
     <div class="modal-content">
-      <span class="close" onclick="closeTradeModal()">&times;</span>
+      <span class="close" onclick="closeTradeModal()" aria-label="Fermer">&times;</span>
       <h3 id="trade-modal-title"></h3>
       <p id="trade-modal-info" style="color:#555; margin-bottom:1rem;"></p>
 
