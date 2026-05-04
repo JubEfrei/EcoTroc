@@ -4,6 +4,9 @@ Plateforme de troc écoresponsable permettant d’échanger des objets ou des po
 
 👉 **URL du site :** https://eco-troc-cyan.vercel.app/
 👉 **Rapport :** [/docs/Rapport-Ecotroc.pdf](docs/Rapport-Ecotroc.pdf)
+👉 **Github :** https://github.com/JubEfrei/EcoTroc/
+
+
 
 ---
 
@@ -94,8 +97,8 @@ docs/       → rapport
 
 ## 🌿 Green IT
 
-* < 10 Ko/page
-* < 5 requêtes HTTP
+* < 100 Ko/page
+* < 10 requêtes HTTP
 * Lighthouse = 100
 
 ---
