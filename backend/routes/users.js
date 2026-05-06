@@ -146,6 +146,34 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// PUT - Changer le mot de passe
+router.put('/:id/password', requireAuth, async (req, res) => {
+  if (Number(req.session.userId) !== Number(req.params.id)) {
+    return res.status(403).json({ error: 'Non autorisé' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit faire au moins 6 caractères' });
+  }
+
+  try {
+    const user = await db.get('SELECT password_hash FROM users WHERE id = ?', [req.params.id]);
+    if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    await db.run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newHash, req.params.id]);
+    res.json({ message: 'Mot de passe modifié avec succès' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
+  }
+});
+
 // DELETE - Supprimer un utilisateur (avec confirmation)
 router.delete('/:id', requireAuth, async (req, res) => {
   if (Number(req.session.userId) !== Number(req.params.id)) {

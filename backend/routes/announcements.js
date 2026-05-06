@@ -134,10 +134,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// GET - Lister les annonces actives (pagination, max 20)
+// GET - Lister les annonces actives (pagination, 4 par page)
 router.get('/', async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = 20;
+  const limit = 4;
   const offset = (page - 1) * limit;
   const category = req.query.category;
 

@@ -189,6 +189,7 @@ async function logout(event) {
 
 // Charger les annonces
 async function loadAnnouncements() {
+  const list = document.getElementById('announcements-list');
   try {
     const url = new URL(`${API_URL}/announcements`, window.location.origin);
     url.searchParams.append('page', currentPage);
@@ -198,18 +199,17 @@ async function loadAnnouncements() {
 
     const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
     if (!response.ok) {
-      console.error('Erreur API annonces', response.status);
       const data = await response.json().catch(() => ({}));
-      displayAnnouncements([]);
+      list.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:red;">Erreur ${response.status} : ${data.error || 'Impossible de charger les annonces.'}</p>`;
       return;
     }
 
     const data = await response.json();
-
     displayAnnouncements(data.announcements || []);
     displayPagination(data.pagination || { page: 1, pages: 0 });
   } catch (error) {
     console.error('Erreur lors du chargement:', error);
+    if (list) list.innerHTML = `<p style="grid-column:1/-1;text-align:center;color:red;">Erreur réseau : ${error.message}</p>`;
   }
 }
 
@@ -241,7 +241,7 @@ function displayAnnouncements(announcements) {
       const desc = ann.description ? escapeHtml(String(ann.description).substring(0, 100)) : '';
       const imageUrl = typeof ann.image_url === 'string' && ann.image_url ? ann.image_url : null;
       const imgHtml = imageUrl
-        ? `<img src="${imageUrl}" alt="${escapeHtml(String(ann.title))}" style="width:100%; height:200px; object-fit:cover; border-radius:0.25rem; margin-bottom:1rem;" onerror="this.style.display='none'">`
+        ? `<img src="${imageUrl}" alt="${escapeHtml(String(ann.title))}" loading="lazy" style="width:100%; height:200px; object-fit:cover; border-radius:0.25rem; margin-bottom:1rem;" onerror="this.style.display='none'">`
         : '';
 
       return `
