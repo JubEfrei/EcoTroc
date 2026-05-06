@@ -97,13 +97,26 @@ async function initDatabase() {
 
   // Migrations for existing databases
   const migrations = [
-    'ALTER TABLE exchanges ADD COLUMN offer_item TEXT'
+    'ALTER TABLE exchanges ADD COLUMN offer_item TEXT',
+    'ALTER TABLE announcements ADD COLUMN is_reserved INTEGER DEFAULT 0',
+    'ALTER TABLE exchanges ADD COLUMN confirmed_by_requester INTEGER DEFAULT 0',
+    'ALTER TABLE exchanges ADD COLUMN confirmed_by_owner INTEGER DEFAULT 0',
+    `CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exchange_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (exchange_id) REFERENCES exchanges(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_messages_exchange_id ON messages(exchange_id)'
   ];
   for (const migration of migrations) {
     try {
       await client.execute({ sql: migration, args: [] });
     } catch (_) {
-      // Column already exists — safe to ignore
+      // Column/table already exists — safe to ignore
     }
   }
 

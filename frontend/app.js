@@ -366,12 +366,13 @@ async function confirmTrade() {
     const data = await response.json();
 
     if (response.ok) {
-      msgDiv.textContent = data.message;
       msgDiv.className = 'message success';
-      if (selectedAnnouncement.exchange_type === 'points' && currentUser) {
-        currentUser.points = (Number(currentUser.points) || 0) - Number(selectedAnnouncement.points_value);
+      if (selectedAnnouncement.exchange_type === 'points') {
+        msgDiv.innerHTML = escapeHtml(data.message) + ' <a href="/dashboard.html?section=chat" style="color:inherit; font-weight:bold;">Voir le chat →</a>';
+      } else {
+        msgDiv.textContent = data.message;
       }
-      setTimeout(() => { closeTradeModal(); loadAnnouncements(); }, 1500);
+      setTimeout(() => { closeTradeModal(); loadAnnouncements(); }, 2500);
     } else {
       msgDiv.textContent = data.error || "Erreur lors de l'échange";
       msgDiv.className = 'message error';

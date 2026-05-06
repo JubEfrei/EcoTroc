@@ -34,6 +34,7 @@
           <button class="btn btn-secondary" onclick="showSection('announcements')" style="width: 100%; margin-bottom: 0.5rem;">Mes annonces</button>
           <button class="btn btn-secondary" onclick="showSection('new-announcement')" style="width: 100%; margin-bottom: 0.5rem;">Nouvelle annonce</button>
           <button class="btn btn-secondary" onclick="showSection('exchanges')" style="width: 100%; margin-bottom: 0.5rem;">Échanges reçus</button>
+          <button class="btn btn-secondary" onclick="showSection('chat')" style="width: 100%; margin-bottom: 0.5rem;">Échanges en cours</button>
         </div>
       </aside>
 
@@ -145,7 +146,33 @@
         <div id="exchanges-section" style="display:none;">
           <h2>Échanges reçus</h2>
           <p style="color:#555; margin-bottom:1rem;">Propositions de troc en attente sur vos annonces.</p>
+          <div id="exchanges-message" class="message"></div>
           <div id="incoming-exchanges"><p>Chargement...</p></div>
+        </div>
+
+        <!-- Section Échanges en cours (chat) -->
+        <div id="chat-section" style="display:none;">
+          <h2>Échanges en cours</h2>
+
+          <!-- Liste des échanges actifs -->
+          <div id="active-exchanges-list"></div>
+
+          <!-- Fenêtre de chat -->
+          <div id="chat-container" style="display:none;">
+            <button class="btn btn-secondary" onclick="showActiveExchanges()" style="margin-bottom:1rem;">← Retour</button>
+            <div id="chat-header" style="padding:1rem; background:#f5f5f5; border-radius:0.25rem; margin-bottom:1rem;"></div>
+            <div id="messages-list" style="height:300px; overflow-y:auto; border:1px solid #ddd; padding:1rem; border-radius:0.25rem; margin-bottom:1rem; background:#fafafa;"></div>
+            <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+              <input type="text" id="message-input" placeholder="Votre message..." style="flex:1; margin-bottom:0;">
+              <button class="btn btn-primary" onclick="sendMessage()">Envoyer</button>
+            </div>
+            <div id="confirm-status" style="margin-bottom:0.75rem; color:#555; font-size:0.9rem;"></div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button id="confirm-btn" class="btn btn-primary" onclick="confirmExchange()">Confirmer l'échange</button>
+              <button class="btn btn-secondary" onclick="cancelExchange()" style="background:#c0392b; border-color:#c0392b; color:#fff;">Annuler l'échange</button>
+            </div>
+            <div id="chat-message" class="message" style="margin-top:1rem;"></div>
+          </div>
         </div>
       </section>
     </div>
@@ -267,7 +294,13 @@
       document.getElementById('announcements-section').style.display = section === 'announcements' ? 'block' : 'none';
       document.getElementById('new-announcement-section').style.display = section === 'new-announcement' ? 'block' : 'none';
       document.getElementById('exchanges-section').style.display = section === 'exchanges' ? 'block' : 'none';
+      document.getElementById('chat-section').style.display = section === 'chat' ? 'block' : 'none';
       if (section === 'exchanges') loadIncomingExchanges();
+      if (section === 'chat') loadActiveExchanges();
+      if (section !== 'chat' && chatPollInterval) {
+        clearInterval(chatPollInterval);
+        chatPollInterval = null;
+      }
     }
 
     async function loadIncomingExchanges() {
@@ -305,13 +338,21 @@
           body: JSON.stringify({ action })
         });
         const data = await response.json();
+        const msgDiv = document.getElementById('exchanges-message');
         if (response.ok) {
+          if (action === 'accept') {
+            msgDiv.textContent = "Échange accepté ! Allez dans « Échanges en cours » pour discuter et confirmer.";
+            msgDiv.className = 'message success';
+          }
           loadIncomingExchanges();
         } else {
-          alert(data.error || 'Erreur');
+          msgDiv.textContent = data.error || 'Erreur';
+          msgDiv.className = 'message error';
         }
       } catch (error) {
-        alert('Erreur réseau');
+        const msgDiv = document.getElementById('exchanges-message');
+        msgDiv.textContent = 'Erreur réseau';
+        msgDiv.className = 'message error';
       }
     }
 
@@ -656,6 +697,212 @@
         console.error('Erreur:', error);
       }
     }
+
+    // ── Chat / Échanges en cours ──────────────────────────────────────────────
+
+    let activeExchangeId = null;
+    let chatPollInterval = null;
+    const activeExchangesCache = {};
+
+    async function loadActiveExchanges() {
+      document.getElementById('active-exchanges-list').style.display = 'block';
+      document.getElementById('chat-container').style.display = 'none';
+      activeExchangeId = null;
+
+      const container = document.getElementById('active-exchanges-list');
+      try {
+        const response = await fetch(`${API_URL}/exchanges/my-active`, DEFAULT_FETCH_OPTIONS);
+        const data = await response.json();
+
+        if (!data.exchanges || data.exchanges.length === 0) {
+          container.innerHTML = '<p>Aucun échange en cours.</p>';
+          return;
+        }
+
+        data.exchanges.forEach(ex => { activeExchangesCache[ex.id] = ex; });
+
+        container.innerHTML = data.exchanges.map(ex => {
+          const isOwner = Number(ex.owner_id) === Number(currentUser.id);
+          const otherUser = isOwner ? ex.requester_username : ex.owner_username;
+          const typeLabel = ex.exchange_type === 'points' ? `${ex.points_value} pt(s)` : 'Troc';
+          return `
+            <div style="border:1px solid #ddd; padding:1rem; border-radius:0.25rem; margin-bottom:1rem; cursor:pointer;" onclick="openChat(${ex.id})">
+              <strong>${escapeHtml(ex.announcement_title)}</strong>
+              <p style="color:#555; margin:0.25rem 0 0;">Avec : ${escapeHtml(otherUser)} &mdash; ${escapeHtml(typeLabel)}</p>
+              <p style="color:#888; font-size:0.8rem; margin:0.25rem 0 0;">Cliquez pour ouvrir le chat</p>
+            </div>`;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = '<p>Erreur lors du chargement.</p>';
+      }
+    }
+
+    function showActiveExchanges() {
+      if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; }
+      activeExchangeId = null;
+      document.getElementById('active-exchanges-list').style.display = 'block';
+      document.getElementById('chat-container').style.display = 'none';
+      loadActiveExchanges();
+    }
+
+    async function openChat(exchangeId) {
+      activeExchangeId = exchangeId;
+      const ex = activeExchangesCache[exchangeId];
+      document.getElementById('active-exchanges-list').style.display = 'none';
+      document.getElementById('chat-container').style.display = 'block';
+      document.getElementById('chat-message').textContent = '';
+
+      if (ex) {
+        const isOwner = Number(ex.owner_id) === Number(currentUser.id);
+        const otherUser = isOwner ? ex.requester_username : ex.owner_username;
+        const typeLabel = ex.exchange_type === 'points' ? `${ex.points_value} point(s)` : 'Troc';
+        document.getElementById('chat-header').innerHTML =
+          `<strong>${escapeHtml(ex.announcement_title)}</strong><br>
+           Échange avec <strong>${escapeHtml(otherUser)}</strong> &mdash; ${escapeHtml(typeLabel)}`;
+      }
+
+      await refreshMessages();
+      if (chatPollInterval) clearInterval(chatPollInterval);
+      chatPollInterval = setInterval(refreshMessages, 3000);
+    }
+
+    async function refreshMessages() {
+      if (!activeExchangeId) return;
+      try {
+        const response = await fetch(`${API_URL}/exchanges/${activeExchangeId}/messages`, DEFAULT_FETCH_OPTIONS);
+        if (!response.ok) return;
+        const data = await response.json();
+        const ex = data.exchange;
+
+        // Messages
+        const list = document.getElementById('messages-list');
+        if (!data.messages || data.messages.length === 0) {
+          list.innerHTML = '<p style="color:#888; text-align:center; margin:0;">Aucun message. Commencez la conversation !</p>';
+        } else {
+          const wasAtBottom = list.scrollHeight - list.scrollTop <= list.clientHeight + 10;
+          list.innerHTML = data.messages.map(msg => {
+            const isMe = Number(msg.sender_id) === Number(currentUser.id);
+            return `
+              <div style="margin-bottom:0.75rem; text-align:${isMe ? 'right' : 'left'};">
+                <span style="background:${isMe ? '#27ae60' : '#e8e8e8'}; color:${isMe ? '#fff' : '#333'}; padding:0.5rem 0.75rem; border-radius:1rem; display:inline-block; max-width:80%; word-break:break-word;">
+                  ${escapeHtml(msg.content)}
+                </span>
+                <div style="font-size:0.75rem; color:#888; margin-top:0.2rem;">${escapeHtml(msg.sender_username)}</div>
+              </div>`;
+          }).join('');
+          if (wasAtBottom) list.scrollTop = list.scrollHeight;
+        }
+
+        // Statut des confirmations
+        const userId = Number(currentUser.id);
+        const isOwner = Number(ex.owner_id) === userId;
+        const myConfirmed = isOwner ? Number(ex.confirmed_by_owner) : Number(ex.confirmed_by_requester);
+        const theirConfirmed = isOwner ? Number(ex.confirmed_by_requester) : Number(ex.confirmed_by_owner);
+
+        const confirmBtn = document.getElementById('confirm-btn');
+        if (myConfirmed) {
+          confirmBtn.textContent = 'Vous avez confirmé ✓';
+          confirmBtn.disabled = true;
+        } else {
+          confirmBtn.textContent = "Confirmer l'échange";
+          confirmBtn.disabled = false;
+        }
+
+        const parts = [];
+        if (myConfirmed) parts.push('Vous avez confirmé');
+        if (theirConfirmed) parts.push("L'autre utilisateur a confirmé");
+        document.getElementById('confirm-status').textContent = parts.join(' • ');
+      } catch (err) {
+        console.error('Erreur refresh messages:', err);
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('message-input');
+      const content = input.value.trim();
+      if (!content || !activeExchangeId) return;
+
+      try {
+        const response = await fetch(`${API_URL}/exchanges/${activeExchangeId}/messages`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        if (response.ok) {
+          input.value = '';
+          await refreshMessages();
+        }
+      } catch (err) {
+        console.error('Erreur envoi message:', err);
+      }
+    }
+
+    async function confirmExchange() {
+      if (!activeExchangeId) return;
+      try {
+        const response = await fetch(`${API_URL}/exchanges/${activeExchangeId}/confirm`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        const msgDiv = document.getElementById('chat-message');
+        if (response.ok) {
+          msgDiv.textContent = data.message;
+          msgDiv.className = 'message success';
+          if (data.completed) {
+            clearInterval(chatPollInterval);
+            chatPollInterval = null;
+            // Refresh points in sidebar
+            const meRes = await fetch(`${API_URL}/users/me`, DEFAULT_FETCH_OPTIONS);
+            if (meRes.ok) { currentUser = await meRes.json(); loadUserProfile(); }
+            setTimeout(() => showActiveExchanges(), 2000);
+          } else {
+            await refreshMessages();
+          }
+        } else {
+          msgDiv.textContent = data.error || 'Erreur';
+          msgDiv.className = 'message error';
+        }
+      } catch (err) {
+        document.getElementById('chat-message').textContent = 'Erreur réseau';
+        document.getElementById('chat-message').className = 'message error';
+      }
+    }
+
+    async function cancelExchange() {
+      if (!activeExchangeId) return;
+      if (!confirm("Êtes-vous sûr de vouloir annuler cet échange ? L'annonce sera remise en ligne.")) return;
+      try {
+        const response = await fetch(`${API_URL}/exchanges/${activeExchangeId}/cancel`, {
+          ...DEFAULT_FETCH_OPTIONS,
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        const msgDiv = document.getElementById('chat-message');
+        if (response.ok) {
+          msgDiv.textContent = data.message;
+          msgDiv.className = 'message success';
+          clearInterval(chatPollInterval);
+          chatPollInterval = null;
+          setTimeout(() => showActiveExchanges(), 1500);
+        } else {
+          msgDiv.textContent = data.error || 'Erreur';
+          msgDiv.className = 'message error';
+        }
+      } catch (err) {
+        document.getElementById('chat-message').textContent = 'Erreur réseau';
+        document.getElementById('chat-message').className = 'message error';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('message-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') sendMessage();
+      });
+    });
   </script>
 </body>
 </html>

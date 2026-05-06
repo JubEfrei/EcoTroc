@@ -141,7 +141,7 @@ router.get('/', async (req, res) => {
   const offset = (page - 1) * limit;
   const category = req.query.category;
 
-  let query = 'SELECT a.id, a.user_id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1';
+  let query = 'SELECT a.id, a.user_id, a.title, a.description, a.category, a.condition, a.exchange_type, a.desired_exchange, a.points_value, a.image_url, a.created_at, u.username FROM announcements a JOIN users u ON a.user_id = u.id WHERE a.is_active = 1 AND a.is_reserved = 0';
   const params = [];
 
   if (category) {
